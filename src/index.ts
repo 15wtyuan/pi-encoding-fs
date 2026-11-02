@@ -9,14 +9,7 @@ import { makeReadOperations, makeWriteOperations, makeEditOperations } from "./o
 import { createEncodingGrepDefinition } from "./grep";
 import { wrapEditToolWithEncodingPreview, clearUtf8Cache } from "./edit-preview";
 import { clearConfigCache } from "./config";
-
-// Always-on note (~90 tokens). Kept short so it doesn't dilute the LLM's
-// attention; cached after the first turn so marginal cost is near zero.
-// Covers both cases in one constant: when a config exists (don't manually
-// re-encode / corrupts on-disk) and when one doesn't (create it on garbled
-// Chinese). No runtime branch -> stable prompt prefix, cache-friendly.
-const ENCODING_NOTE = `Note: \`read\`/\`write\`/\`edit\`/\`grep\` auto-transcode GB18030/GBK ↔ UTF-8 where a \`.encoding-converter.json\` exists (nearest wins; deeper overrides). Don't \`iconv\` or re-save as UTF-8 — that corrupts on-disk encoding. If \`read\` shows garbled Chinese, create/edit \`.encoding-converter.json\`:
-{"sourceEncoding":"GB18030","overrides":[{"pattern":"legacy/**","sourceEncoding":"GBK"}]}`;
+import { ENCODING_NOTE } from "./note";
 
 export default function (pi: ExtensionAPI) {
   const cwd = process.cwd();

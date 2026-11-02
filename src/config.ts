@@ -11,8 +11,12 @@ export interface OverrideRule {
 export interface EncodingConfig {
   sourceEncoding: string;
   confidenceThreshold: number;
+  /** Treat UTF-8 files under a single-byte config as UTF-8 (default true). */
+  utf8Guard?: boolean;
   overrides?: OverrideRule[];
 }
+
+export const CONFIG_FILENAME = ".encoding-converter.json";
 
 export interface FoundConfig {
   config: EncodingConfig;
@@ -30,7 +34,7 @@ export function clearConfigCache(): void {
 
 async function loadConfigInDir(dir: string): Promise<EncodingConfig | null> {
   if (dirCache.has(dir)) return dirCache.get(dir) ?? null;
-  const p = path.join(dir, ".encoding-converter.json");
+  const p = path.join(dir, CONFIG_FILENAME);
   try {
     const parsed = JSON.parse(await readFile(p, "utf-8"));
     const config: EncodingConfig = { ...DEFAULTS, ...parsed };

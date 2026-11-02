@@ -1,17 +1,17 @@
 {
   "name": "pi-encoding-fs",
-  "version": "0.4.0",
-  "description": "Encoding-aware read/write/edit/grep for Pi — transparent GB18030/GBK/GB2312 support",
+  "version": "0.5.0",
+  "description": "Encoding-aware read/write/edit/grep for Pi — transparent GB18030/GBK/GB2312 and ISO-8859-1/ISO-8859-15/Windows-1252 support",
   "type": "module",
   "license": "MIT",
   "author": "yuanwentao",
-  "homepage": "https://github.com/15wtyuan/pi-encoding-fs#readme",
+  "homepage": "https://github.com/msoftware/pi-encoding-fs#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/15wtyuan/pi-encoding-fs.git"
+    "url": "git+https://github.com/msoftware/pi-encoding-fs.git"
   },
   "bugs": {
-    "url": "https://github.com/15wtyuan/pi-encoding-fs/issues"
+    "url": "https://github.com/msoftware/pi-encoding-fs/issues"
   },
   "keywords": [
     "pi-package",
@@ -21,7 +21,11 @@
     "gbk",
     "gb2312",
     "utf-8",
-    "chinese"
+    "chinese",
+    "iso-8859-1",
+    "iso-8859-15",
+    "windows-1252",
+    "latin1"
   ],
   "engines": {
     "node": ">=18"
