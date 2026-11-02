@@ -5,6 +5,10 @@ Transparently handles GB18030 / GBK / GB2312 and ISO-8859-1 / ISO-8859-15 / Wind
 files while preserving Pi's native TUI
 (diff view, syntax highlighting, line numbers).
 
+> This is the [msoftware fork](https://github.com/msoftware/pi-encoding-fs) of
+> [15wtyuan/pi-encoding-fs](https://github.com/15wtyuan/pi-encoding-fs). It adds
+> ISO-8859-1, ISO-8859-15 and Windows-1252 support (see [CHANGELOG](CHANGELOG.md)).
+
 ## How it works
 
 The extension registers tools with the same names as Pi's built-ins, overriding them.
@@ -84,16 +88,17 @@ Example: a Latin-9 code base whose docs are UTF-8:
 
 ## Install
 
-From npm:
+From git (this fork, includes ISO-8859-1 / ISO-8859-15 / Windows-1252 support):
+
+```bash
+pi install git:github.com/msoftware/pi-encoding-fs
+```
+
+The `pi-encoding-fs` package on npm is the upstream release by 15wtyuan and only
+supports GB18030 / GBK / GB2312:
 
 ```bash
 pi install npm:pi-encoding-fs
-```
-
-From git:
-
-```bash
-pi install git:github.com/15wtyuan/pi-encoding-fs
 ```
 
 ## Notes / limitations
