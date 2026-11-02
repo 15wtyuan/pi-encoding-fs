@@ -9,7 +9,8 @@ import type {
   EditOperations,
 } from "@earendil-works/pi-coding-agent";
 import { resolveReadEncoding, resolveWriteEncoding } from "./resolve";
-import { decodeToUtf8, encodeFromUtf8 } from "./encoding/converter";
+import { decodeToUtf8, encodeFromUtf8, encodeFromUtf8Strict } from "./encoding/converter";
+import { isSingleByteEncoding } from "./encoding/registry";
 import { detectLineEnding, restoreLineEndings, type LineEndingStyle } from "./encoding/line-endings";
 import {
   detectSupportedImageMimeType,
@@ -48,7 +49,17 @@ async function writeEncoded(absPath: string, utf8content: string): Promise<void>
   } else {
     const style = await detectExistingLineEnding(absPath);
     const restored = style ? restoreLineEndings(utf8content, style) : utf8content;
-    await writeFile(absPath, encodeFromUtf8(restored, enc));
+    // Single-byte targets are lossy: verify every char first, write nothing on failure.
+    let bytes: Buffer;
+    try {
+      bytes = isSingleByteEncoding(enc) ? encodeFromUtf8Strict(restored, enc) : encodeFromUtf8(restored, enc);
+    } catch (err) {
+      if (err instanceof Error && err.name === "UnrepresentableCharsError") {
+        err.message = `${absPath}: ${err.message}`;
+      }
+      throw err;
+    }
+    await writeFile(absPath, bytes);
   }
   // Writing the config file changes encoding decisions for the tree below it;
   // invalidate the cache so later read/write/grep reflect the new config.
