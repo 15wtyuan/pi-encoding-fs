@@ -5,13 +5,13 @@
   "type": "module",
   "license": "MIT",
   "author": "yuanwentao",
-  "homepage": "https://github.com/15wtyuan/pi-encoding-fs#readme",
+  "homepage": "https://github.com/msoftware/pi-encoding-fs#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/15wtyuan/pi-encoding-fs.git"
+    "url": "git+https://github.com/msoftware/pi-encoding-fs.git"
   },
   "bugs": {
-    "url": "https://github.com/15wtyuan/pi-encoding-fs/issues"
+    "url": "https://github.com/msoftware/pi-encoding-fs/issues"
   },
   "keywords": [
     "pi-package",
