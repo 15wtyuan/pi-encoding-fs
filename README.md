@@ -70,6 +70,8 @@ Example: a Latin-9 code base whose docs are UTF-8:
   checked; if one is not representable (e.g. `€` in ISO-8859-1, `“ ”` in ISO-8859-1/-15,
   emoji or CJK anywhere) **nothing is written** and the tool reports the characters, their
   line numbers and the encoding. Files are never silently changed to `?` or U+FFFD.
+  Consequently, a Windows-1252 file containing the undefined bytes `81 8D 8F 90 9D` (read as
+  U+FFFD) cannot be rewritten by the extension; the write is refused instead of corrupting them.
 
 ## Requirements
 
