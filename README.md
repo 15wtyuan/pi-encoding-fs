@@ -1,7 +1,8 @@
 # pi-encoding-fs
 
 Encoding-aware `read` / `write` / `edit` / `grep` for [Pi](https://github.com/earendil-works).
-Transparently handles GB18030 / GBK / GB2312 files while preserving Pi's native TUI
+Transparently handles GB18030 / GBK / GB2312 and ISO-8859-1 / ISO-8859-15 / Windows-1252
+files while preserving Pi's native TUI
 (diff view, syntax highlighting, line numbers).
 
 ## How it works
@@ -9,16 +10,16 @@ Transparently handles GB18030 / GBK / GB2312 files while preserving Pi's native 
 The extension registers tools with the same names as Pi's built-ins, overriding them.
 `read`/`write`/`edit` reuse Pi's own tool skeletons via `createXxxToolDefinition`, injecting
 encoding conversion only at the byte-IO layer, so Pi keeps computing and rendering diffs in
-UTF-8. `grep` is self-implemented so it can search Chinese text inside GB-encoded files.
+UTF-8. `grep` is self-implemented so it can search non-ASCII text (Chinese, umlauts, …) inside legacy-encoded files.
 
 Encoding is decided **per file**: the extension walks up from the file's directory to the
 nearest `.encoding-converter.json`. If none is found, it passes through as plain UTF-8
 (identical to not having the extension installed).
 
 The extension also injects a short note into the system prompt so the agent knows the
-built-in tools already handle GB↔UTF-8 transcoding (no need to run `iconv` or re-save
+built-in tools already handle legacy↔UTF-8 transcoding (no need to run `iconv` or re-save
 files), and — when no config exists — how to create a `.encoding-converter.json` itself
-if it ever reads garbled Chinese. The note is constant so prompt caching stays effective.
+if it ever reads garbled Chinese or broken umlauts. The note is constant so prompt caching stays effective.
 
 ## Configuration
 
@@ -36,9 +37,39 @@ unless a deeper config overrides it.
 }
 ```
 
-- `sourceEncoding`: default encoding when detection is uncertain; also used for new files.
-- `confidenceThreshold`: minimum chardet confidence (0-1) to trust auto-detection.
+- `sourceEncoding`: default encoding (when GB detection is uncertain); also used for new files.
+- `confidenceThreshold`: minimum chardet confidence (0-1) to trust auto-detection (GB only).
+- `utf8Guard` (default `true`): under a single-byte `sourceEncoding`, a file that starts with a
+  UTF-8 BOM or is fully valid UTF-8 containing non-ASCII characters is treated as UTF-8 and
+  written back as UTF-8. Set `false` to always apply the configured encoding.
 - `overrides`: glob rules relative to the config file's directory; most specific wins.
+
+### Supported encodings
+
+`UTF-8`, `GB18030`, `GBK`, `GB2312`, `ISO-8859-1`, `ISO-8859-15`, `Windows-1252`.
+Names are case-insensitive; aliases such as `latin1`, `latin9`, `cp1252`, `win1252`,
+`iso_8859-15` and `utf8` are accepted. Any other name makes `read`/`write`/`edit`/`grep`
+fail with an error naming the config file and the allowed values (no silent UTF-8 fallback).
+
+### ISO-8859-1/-15 and Windows-1252
+
+Example: a Latin-9 code base whose docs are UTF-8:
+
+```json
+{
+  "sourceEncoding": "ISO-8859-15",
+  "overrides": [{ "pattern": "docs/**", "sourceEncoding": "UTF-8" }]
+}
+```
+
+- The configured single-byte encoding is applied directly; no auto-detection and no Python needed.
+- ISO-8859-1 and Windows-1252 differ only in bytes `0x80`–`0x9F` (control characters vs.
+  `€ „ “ ”` …). ISO-8859-15 replaces eight characters of ISO-8859-1, notably `€` at `0xA4`.
+  Pick the one your files really use; `grep` (ripgrep) treats ISO-8859-1 as Windows-1252.
+- Single-byte encodings cannot hold every character. Before writing, every character is
+  checked; if one is not representable (e.g. `€` in ISO-8859-1, `“ ”` in ISO-8859-1/-15,
+  emoji or CJK anywhere) **nothing is written** and the tool reports the characters, their
+  line numbers and the encoding. Files are never silently changed to `?` or U+FFFD.
 
 ## Requirements
 
@@ -47,7 +78,7 @@ unless a deeper config overrides it.
   If Python is missing, the extension silently falls back to `sourceEncoding` from config.
 - `grep` uses [ripgrep](https://github.com/BurntSushi/ripgrep) (`rg`) for fast,
   encoding-aware search. If `rg` is not found on `PATH`, `grep` transparently
-  falls back to Pi's built-in grep (which cannot search inside GB-encoded files).
+  falls back to Pi's built-in grep (which cannot search inside legacy-encoded files).
 
 ## Install
 
@@ -71,6 +102,9 @@ pi install git:github.com/15wtyuan/pi-encoding-fs
   nearest `.encoding-converter.json`), so searching Chinese inside GB18030 files is both
   correct and fast. It excludes `.git` / `.svn` / `.hg` / `node_modules` by default.
   Honoring `.gitignore` and aligning match limits with Pi's built-in grep are planned.
+- `grep` decodes every file of a group with that group's encoding. A UTF-8 file inside a
+  single-byte group (without a `UTF-8` override for its directory) is searched as
+  single-byte text, so non-ASCII matches may be missed there.
 
 ### `edit` preview for GB-encoded files
 
@@ -96,9 +130,10 @@ Known trade-offs of this approach (no upstream change required):
   Pi's `renderResult` replaces it with the actual diff. GB files never get a false red
   error box anymore.
 - The UTF-8 vs GB decision is a **byte-level** probe (`TextDecoder("utf-8",{fatal:true})`
-  throws on GB bytes), mtime-cached. A genuinely single-byte legacy encoding (ISO-8859 /
-  Windows-1252) would be treated as non-UTF-8 and routed through the encoding-aware
-  preview; this is harmless as long as a matching `.encoding-converter.json` exists.
+  throws on GB bytes), mtime-cached. A single-byte legacy file (ISO-8859 /
+  Windows-1252) with non-ASCII bytes is not valid UTF-8 and is routed through the
+  encoding-aware preview, which reads through `operations.readFile` and therefore uses the
+  configured encoding.
 
 ## License
 

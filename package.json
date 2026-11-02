@@ -1,7 +1,7 @@
 {
   "name": "pi-encoding-fs",
-  "version": "0.4.0",
-  "description": "Encoding-aware read/write/edit/grep for Pi — transparent GB18030/GBK/GB2312 support",
+  "version": "0.5.0",
+  "description": "Encoding-aware read/write/edit/grep for Pi — transparent GB18030/GBK/GB2312 and ISO-8859-1/ISO-8859-15/Windows-1252 support",
   "type": "module",
   "license": "MIT",
   "author": "yuanwentao",
@@ -21,7 +21,11 @@
     "gbk",
     "gb2312",
     "utf-8",
-    "chinese"
+    "chinese",
+    "iso-8859-1",
+    "iso-8859-15",
+    "windows-1252",
+    "latin1"
   ],
   "engines": {
     "node": ">=18"
