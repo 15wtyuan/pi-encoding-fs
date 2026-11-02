@@ -10,7 +10,8 @@ import {
   type ExtensionContext,
   type ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
-import { findNearestConfig, type FoundConfig } from "./config";
+import { findNearestConfig, CONFIG_FILENAME, type FoundConfig } from "./config";
+import { normalizeEncoding, toRipgrepLabel, UnsupportedEncodingError } from "./encoding/registry";
 
 export const grepSchema = Type.Object({
   pattern: Type.String({ description: "Regex (or literal when literal=true) pattern to search for" }),
@@ -117,17 +118,25 @@ export interface EncodingGroup {
  */
 export function buildEncodingGroups(found: FoundConfig): EncodingGroup[] {
   const { config } = found;
-  const defaultEncoding = config.sourceEncoding;
+  const configPath = path.join(found.configDir, CONFIG_FILENAME);
+  // Compare canonical names so "latin1" and "ISO-8859-1" form one group (FA-13).
+  const canon = (name: string): string => {
+    const c = normalizeEncoding(name);
+    if (!c) throw new UnsupportedEncodingError(name, configPath);
+    return c;
+  };
+  const defaultEncoding = canon(config.sourceEncoding);
   const overrideGroups = new Map<string, Set<string>>();
   const excludeDirs = new Set<string>();
 
   for (const ov of config.overrides ?? []) {
-    if (ov.sourceEncoding === defaultEncoding) continue;
+    const ovEncoding = canon(ov.sourceEncoding);
+    if (ovEncoding === defaultEncoding) continue;
     const dir = globDirPrefix(ov.pattern);
     if (dir === ".") continue; // root-level override can't be isolated by dir
     excludeDirs.add(dir);
-    if (!overrideGroups.has(ov.sourceEncoding)) overrideGroups.set(ov.sourceEncoding, new Set());
-    overrideGroups.get(ov.sourceEncoding)!.add(dir);
+    if (!overrideGroups.has(ovEncoding)) overrideGroups.set(ovEncoding, new Set());
+    overrideGroups.get(ovEncoding)!.add(dir);
   }
 
   const groups: EncodingGroup[] = [
@@ -141,14 +150,12 @@ export function buildEncodingGroups(found: FoundConfig): EncodingGroup[] {
 
 // ── ripgrep invocation ───────────────────────────────────────────────
 
-/** WHATWG encoding label for ripgrep's --encoding. UTF-8 uses rg's default (no flag). */
-function rgEncodingLabel(encoding: string): string | null {
-  const up = encoding.toUpperCase();
-  if (up === "UTF-8" || up === "UTF8") return null; // rg default handles UTF-8
-  return encoding.toLowerCase(); // gb18030 / gbk / gb2312 are valid WHATWG labels
+/** WHATWG encoding label for ripgrep's --encoding; null = rg default (UTF-8). Aliases never reach rg. */
+export function rgEncodingLabel(encoding: string): string | null {
+  return toRipgrepLabel(encoding);
 }
 
-function buildRgArgs(input: GrepInput, group: EncodingGroup, base: string): string[] {
+export function buildRgArgs(input: GrepInput, group: EncodingGroup, base: string): string[] {
   const args: string[] = ["--no-heading", "--line-number", "--color", "never"];
   const enc = rgEncodingLabel(group.encoding);
   if (enc) args.push("--encoding", enc);
@@ -248,8 +255,8 @@ export function createEncodingGrepDefinition(cwd: string): ToolDefinition<typeof
     name: "grep",
     label: "grep (encoding aware)",
     description:
-      "Search file contents by regex. Encoding-aware: transparently searches GB18030/GBK/GB2312 files, " +
-      "including Chinese patterns. Excludes .git/node_modules by default.",
+      "Search file contents by regex. Encoding-aware: transparently searches GB18030/GBK/GB2312 and ISO-8859-1/-15/Windows-1252 files, " +
+      "including non-ASCII patterns. Excludes .git/node_modules by default.",
     parameters: grepSchema,
     async execute(
       toolCallId: string,
